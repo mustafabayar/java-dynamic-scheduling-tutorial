@@ -7,11 +7,13 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
+import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.TimeZone;
 import java.util.concurrent.ScheduledFuture;
 
 /**
@@ -29,7 +31,7 @@ public class DynamicSchedulerVersion2 implements SchedulingConfigurer {
     ScheduledFuture future;
 
     @Bean
-    public TaskScheduler poolScheduler() {
+    public TaskScheduler poolScheduler2() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setThreadNamePrefix("ThreadPoolTaskScheduler");
         scheduler.setPoolSize(1);
@@ -44,7 +46,7 @@ public class DynamicSchedulerVersion2 implements SchedulingConfigurer {
             scheduledTaskRegistrar = taskRegistrar;
         }
         if (taskRegistrar.getScheduler() == null) {
-            taskRegistrar.setScheduler(poolScheduler());
+            taskRegistrar.setScheduler(poolScheduler2());
         }
 
         future = taskRegistrar.getScheduler().schedule(() -> scheduleFixed(), t -> {
@@ -54,10 +56,19 @@ public class DynamicSchedulerVersion2 implements SchedulingConfigurer {
             nextExecutionTime.add(Calendar.SECOND, 7);
             return nextExecutionTime.getTime();
         });
+
+        // or cron way, you can also get the expression from DB or somewhere else just like we did in DynamicScheduler service.
+        CronTrigger croneTrigger = new CronTrigger("0/10 * * * * ?", TimeZone.getDefault());
+        future = taskRegistrar.getScheduler().schedule(() -> scheduleCron("0/10 * * * * ?"), croneTrigger);
     }
 
     public void scheduleFixed() {
         LOGGER.info("scheduleFixed: Next execution time of this will always be 5 seconds");
+    }
+
+    // Only reason this method gets the cron as parameter is for debug purposes.
+    public void scheduleCron(String cron) {
+        LOGGER.info("scheduleCron: Next execution time of this taken from cron expression -> {}", cron);
     }
 
     /**

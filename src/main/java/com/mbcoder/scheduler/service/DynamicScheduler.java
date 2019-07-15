@@ -10,13 +10,11 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
+import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.Random;
+import java.util.*;
 
 @Service
 public class DynamicScheduler implements SchedulingConfigurer {
@@ -72,6 +70,10 @@ public class DynamicScheduler implements SchedulingConfigurer {
             nextExecutionTime.add(Calendar.SECOND, Integer.parseInt(repo.findById("next_exec_time").get().getConfigValue()));
             return nextExecutionTime.getTime();
         });
+
+        // or cron way, you can also get the expression from DB or somewhere else just like we did above.
+        CronTrigger croneTrigger = new CronTrigger("0/10 * * * * ?", TimeZone.getDefault());
+        taskRegistrar.addTriggerTask(() -> scheduleCron("0/10 * * * * ?"), croneTrigger);
     }
 
     public void scheduleDynamically() {
@@ -86,6 +88,11 @@ public class DynamicScheduler implements SchedulingConfigurer {
 
     public void scheduledDatabase(String time) {
         LOGGER.info("scheduledDatabase: Next execution time of this will be taken from DB -> {}", time);
+    }
+
+    // Only reason this method gets the cron as parameter is for debug purposes.
+    public void scheduleCron(String cron) {
+        LOGGER.info("scheduleCron: Next execution time of this taken from cron expression -> {}", cron);
     }
 
     // This is only to show that next execution time can be changed on the go with SchedulingConfigurer.
