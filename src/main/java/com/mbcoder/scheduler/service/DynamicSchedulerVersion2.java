@@ -10,10 +10,7 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 
 /**
@@ -28,7 +25,10 @@ public class DynamicSchedulerVersion2 implements SchedulingConfigurer {
 
     ScheduledTaskRegistrar scheduledTaskRegistrar;
 
-    ScheduledFuture future;
+    ScheduledFuture future1;
+    ScheduledFuture future2;
+    ScheduledFuture future3;
+    Map<ScheduledFuture, Boolean> futureMap = new HashMap<>();
 
     @Bean
     public TaskScheduler poolScheduler2() {
@@ -49,21 +49,35 @@ public class DynamicSchedulerVersion2 implements SchedulingConfigurer {
             taskRegistrar.setScheduler(poolScheduler2());
         }
 
-        future = taskRegistrar.getScheduler().schedule(() -> scheduleFixed(), t -> {
-            Calendar nextExecutionTime = new GregorianCalendar();
-            Date lastActualExecutionTime = t.lastActualExecutionTime();
-            nextExecutionTime.setTime(lastActualExecutionTime != null ? lastActualExecutionTime : new Date());
-            nextExecutionTime.add(Calendar.SECOND, 7);
-            return nextExecutionTime.getTime();
-        });
+        if (future1 == null || (future1.isCancelled() && futureMap.get(future1) == true)) {
+            future1 = taskRegistrar.getScheduler().schedule(() -> scheduleFixed(5), t -> {
+                Calendar nextExecutionTime = new GregorianCalendar();
+                Date lastActualExecutionTime = t.lastActualExecutionTime();
+                nextExecutionTime.setTime(lastActualExecutionTime != null ? lastActualExecutionTime : new Date());
+                nextExecutionTime.add(Calendar.SECOND, 5);
+                return nextExecutionTime.getTime();
+            });
+        }
 
-        // or cron way, you can also get the expression from DB or somewhere else just like we did in DynamicScheduler service.
-        CronTrigger croneTrigger = new CronTrigger("0/10 * * * * ?", TimeZone.getDefault());
-        future = taskRegistrar.getScheduler().schedule(() -> scheduleCron("0/10 * * * * ?"), croneTrigger);
+        if (future2 == null || (future2.isCancelled() && futureMap.get(future2) == true)) {
+            future2 = taskRegistrar.getScheduler().schedule(() -> scheduleFixed(8), t -> {
+                Calendar nextExecutionTime = new GregorianCalendar();
+                Date lastActualExecutionTime = t.lastActualExecutionTime();
+                nextExecutionTime.setTime(lastActualExecutionTime != null ? lastActualExecutionTime : new Date());
+                nextExecutionTime.add(Calendar.SECOND, 8);
+                return nextExecutionTime.getTime();
+            });
+        }
+
+        // Or cron way, you can also get the expression from DB or somewhere else just like we did in DynamicScheduler service.
+        if (future3 == null || (future3.isCancelled() && futureMap.get(future3) == true)) {
+            CronTrigger croneTrigger = new CronTrigger("0/10 * * * * ?", TimeZone.getDefault());
+            future3 = taskRegistrar.getScheduler().schedule(() -> scheduleCron("0/10 * * * * ?"), croneTrigger);
+        }
     }
 
-    public void scheduleFixed() {
-        LOGGER.info("scheduleFixed: Next execution time of this will always be 5 seconds");
+    public void scheduleFixed(int frequency) {
+        LOGGER.info("scheduleFixed: Next execution time of this will always be {} seconds", frequency);
     }
 
     // Only reason this method gets the cron as parameter is for debug purposes.
@@ -75,14 +89,28 @@ public class DynamicSchedulerVersion2 implements SchedulingConfigurer {
      * @param mayInterruptIfRunning {@code true} if the thread executing this task
      * should be interrupted; otherwise, in-progress tasks are allowed to complete
      */
-    public void cancelTasks(boolean mayInterruptIfRunning) {
-        LOGGER.info("Cancelling all tasks");
+    public void cancelFuture(boolean mayInterruptIfRunning, ScheduledFuture future) {
+        LOGGER.info("Cancelling a future");
         future.cancel(mayInterruptIfRunning); // set to false if you want the running task to be completed first.
+        futureMap.put(future, false);
     }
 
-    public void activateScheduler() {
-        LOGGER.info("Re-Activating Scheduler");
+    public void activateFuture(ScheduledFuture future) {
+        LOGGER.info("Re-Activating a future");
+        futureMap.put(future, true);
         configureTasks(scheduledTaskRegistrar);
+    }
+
+    public void cancelAll() {
+        cancelFuture(true, future1);
+        cancelFuture(true, future2);
+        cancelFuture(true, future3);
+    }
+
+    public void activateAll() {
+        activateFuture(future1);
+        activateFuture(future2);
+        activateFuture(future3);
     }
 
 }
