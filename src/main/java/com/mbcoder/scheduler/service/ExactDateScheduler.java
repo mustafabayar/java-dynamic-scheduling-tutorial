@@ -20,38 +20,35 @@ public class ExactDateScheduler {
         poolScheduler.setThreadNamePrefix("ThreadPoolTaskScheduler");
         poolScheduler.setPoolSize(1);
         poolScheduler.initialize();
+        LocalDateTime now = LocalDateTime.now();
     }
 
-    public Instant scheduleAt(LocalDate startDate, LocalTime startTime) {
-        LocalDate now = LocalDate.now();
-        LocalTime currentTime = LocalTime.now();
-        if (startDate.isBefore(now) || (startDate.equals(now) && startTime.isBefore(currentTime))) {
+    public Instant scheduleAt(LocalDateTime time) {
+        LocalDateTime now = LocalDateTime.now();
+        if (time.isBefore(now)) {
             throw new IllegalArgumentException("You can not schedule this task as starting date/time is in the past");
         }
 
-        LocalDateTime exactDateTime = startDate.atTime(startTime);
         ZoneId zone = ZoneId.of("Europe/Berlin");
-        ZoneOffset zoneOffSet = zone.getRules().getOffset(exactDateTime);
-        Instant whenToRun = exactDateTime.toInstant(zoneOffSet);
+        ZoneOffset zoneOffSet = zone.getRules().getOffset(time);
+        Instant whenToRun = time.toInstant(zoneOffSet);
         poolScheduler.schedule(() -> realMethod(), whenToRun);
-        return  whenToRun;
+        return whenToRun;
     }
 
-    public void scheduleDaily(LocalDate startDate, LocalDate endDate, LocalTime startTime) {
-        LocalDate now = LocalDate.now();
-        LocalTime currentTime = LocalTime.now();
-        if (now.isAfter(endDate) || (now.isEqual(endDate) && currentTime.isAfter(startTime))) {
+    public void scheduleDaily(LocalDateTime startDate, LocalDateTime endDate) {
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isAfter(endDate)) {
             LOGGER.info("End date reached, stopping scheduling more tasks.");
             return;
         }
 
-        LocalDate dateToStart = startDate;
         // Since we haven't reached the endDate yet, we would be safe to bring startDate to NOW if it was in the past.
-        dateToStart = dateToStart.isBefore(now) ? now : dateToStart;
-
-        Instant scheduledTime = scheduleAt(dateToStart, startTime);
+        // So if we try to start scheduler for 7 days but first 3 days are already in the past, we will run the remaining 4 tasks.
+        LocalDateTime timeToRun = startDate.isBefore(now) ? now : startDate;
+        Instant scheduledTime = scheduleAt(timeToRun);
         // Basically scheduling this method again so that it enqueues new job 1 day later, until we reach end date.
-        poolScheduler.schedule(() -> scheduleDaily(startDate, endDate, startTime), scheduledTime.plus(1, ChronoUnit.DAYS).minus(5, ChronoUnit.MINUTES));
+        poolScheduler.schedule(() -> scheduleDaily(startDate, endDate), scheduledTime.plus(1, ChronoUnit.DAYS).minus(5, ChronoUnit.MINUTES));
     }
 
     public void realMethod() {
