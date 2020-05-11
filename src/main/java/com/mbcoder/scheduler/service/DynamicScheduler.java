@@ -72,8 +72,10 @@ public class DynamicScheduler implements SchedulingConfigurer {
         });
 
         // or cron way, you can also get the expression from DB or somewhere else just like we did above.
-        CronTrigger croneTrigger = new CronTrigger("0/10 * * * * ?", TimeZone.getDefault());
-        taskRegistrar.addTriggerTask(() -> scheduleCron("0/10 * * * * ?"), croneTrigger);
+        taskRegistrar.addTriggerTask(() -> scheduleCron(repo.findById("next_exec_time").get().getConfigValue()), t -> {
+            CronTrigger crontrigger = new CronTrigger(repo.findById("next_exec_time").get().getConfigValue());
+            return crontrigger.nextExecutionTime(t);
+        });
     }
 
     public void scheduleDynamically() {
