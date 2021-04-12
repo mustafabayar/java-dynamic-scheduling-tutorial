@@ -17,11 +17,14 @@ import java.util.concurrent.ScheduledFuture;
  * Alternative version for DynamicScheduler
  * This one should support everything the basic dynamic scheduler does,
  * and on top of it, you can cancel and re-activate the scheduler.
+ *
+ * Also nothing here is set in stone, you can change the implementation depending on your needs,
+ * this is just an example about how to cancel and re-activate
  */
 @Service
-public class DynamicSchedulerVersion2 implements SchedulingConfigurer {
+public class CancellableScheduler implements SchedulingConfigurer {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(DynamicScheduler.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(CancellableScheduler.class);
 
     ScheduledTaskRegistrar scheduledTaskRegistrar;
 
