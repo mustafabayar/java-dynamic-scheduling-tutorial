@@ -22,6 +22,5 @@ This is advanced version of cancellable scheduler and it is more like a producti
 
 - - -
 
-All the above classes are to demonstrate different possibilities of custom schedulers. You can combine those functionalities in your own scheduler according to your needs. If you have any question, or if you want to achieve something that is not done here yet, leave a comment in above blog post and I will try to help as soon as I can.
-
-
+### Disclaimer
+All the above classes are to demonstrate different possibilities of custom schedulers. You can combine those functionalities in your own scheduler according to your needs. This code is written only for demonstration purposes and is not ready for production, use with caution!
